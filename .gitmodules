@@ -1,0 +1,6 @@
+[submodule "data/enUS"]
+	path = data/enUS
+	url = https://github.com/NetrunnerCN/netrunner-data-EN.git
+[submodule "data/zhCN"]
+	path = data/zhCN
+	url = https://github.com/NetrunnerCN/netrunner-data-CN.git
