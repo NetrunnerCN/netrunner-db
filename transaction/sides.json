@@ -1,0 +1,15 @@
+{
+  "name": "sides",
+  "oracle_file": "data/enUS/v2/sides.json",
+  "locale_file": "data/zhCN/json/translations/zh-hans/sides.zh-hans.json",
+  "oracle_id": "id",
+  "locale_id": "code",
+  "link_id": "id",
+  "oracle_fields": [
+    { "source": "id", "field": "codename" },
+    { "source": "name", "field": "oracle_name" }
+  ],
+  "locale_fields": [
+    { "source": "name", "field": "locale_name" }
+  ]
+}
