@@ -1,96 +1,116 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import log from "loglevel";
-import { DataSource } from "typeorm";
 
-import connection from "./connection.json" with { type: "json" };
+import { AppDataSource } from "./data-source.js";
 import { OracleBaseSchema, LocaleBaseSchema } from "./schemas/bases.js";
 import { OracleSideSchema, LocaleSideSchema } from "./schemas/sides.js";
 import { BaseEntity } from "./entities/bases.js";
 import { SideEntity } from "./entities/sides.js";
-import { Transaction } from "./transaction.js";
-import { Table } from "./table.js";
 
-const RESULT_FOLDER = "result";
-const TRANSACTION_FOLDER = "transaction";
-const JSON_EXTENSION = ".json";
-
-async function initialize(): Promise<DataSource> {
-  log.setLevel(log.levels.INFO);
-  const source = new DataSource({
-    ...connection,
-    type: "mysql",
-    logging: "all",
-    entities: [SideEntity],
-    dropSchema: true,
-    synchronize: true,
-  });
-  await source.initialize();
-  return source;
+async function initialize(): Promise<void> {
+    log.setLevel(log.levels.INFO);
+    await AppDataSource.initialize();
 }
 
-async function loadTransaction(name: string): Promise<Transaction> {
-  const address = path.join(TRANSACTION_FOLDER, name + JSON_EXTENSION);
-  const content = await fs.readFile(address, "utf8");
-  return JSON.parse(content);
+async function terminate(): Promise<void> {
+    await AppDataSource.destroy();
 }
 
-async function saveRecord<T extends BaseEntity>(name: string, data: T[]): Promise<void> {
-  const address = path.join(RESULT_FOLDER, name + JSON_EXTENSION);
-  const content = JSON.stringify(data, (k, v) => {
-    return k === "id" ? undefined : v;
-  }, 2);
-  await fs.writeFile(address, content, "utf8");
-}
-
-async function extract<
-  TO extends OracleBaseSchema,
-  TL extends LocaleBaseSchema,
-  TE extends BaseEntity
->(database: DataSource, name: string, constructor: new() => TE): Promise<void> {
-  const records = new Array<TE>();
-  const transaction = await loadTransaction(name);
-  const oracle = new Table<TO>(transaction.oracle_file, transaction.oracle_id);
-  const locale = new Table<TL>(transaction.locale_file, transaction.locale_id);
-  for(const item of oracle.list) {
-    const record = new constructor();
-    for(const f of transaction.oracle_fields) {
-      const idx_src = f.source as keyof TO;
-      const idx_dst = f.field as keyof TE;
-      record[idx_dst] = item[idx_src] as unknown as TE[keyof TE];
+async function load_schemas<T extends OracleBaseSchema | LocaleBaseSchema>(filename: string): Promise<Array<T>> {
+    const result = new Array<T>();
+    const stat = await fs.lstat(filename);
+    if(stat.isDirectory()) {
+        const files = await fs.readdir(filename);
+        for(const f of files) {
+          const subfolder = path.join(filename, f);
+          const subordinates = await load_schemas<T>(subfolder);
+          result.push(...subordinates);
+        }
+    } else if(stat.isFile()) {
+        if(filename.endsWith(".json")) {
+            const text = await fs.readFile(filename, "utf8");
+            const content = JSON.parse(text);
+            if(Array.isArray(content)) {
+                const items = content as T[];
+                for(const i of items) {
+                    result.push(i);
+                }
+            } else {
+                result.push(content as T);
+            }
+        }
     }
 
-    const idx_link = transaction.link_id as keyof TO;
-    const link_identifier = item[idx_link] as string;
-    const locale_item = locale.dict.get(link_identifier.replace("_", "-"));
-    if(locale_item) {
-      for(const f of transaction.locale_fields) {
-        const idx_src = f.source as keyof TL;
-        const idx_dst = f.field as keyof TE;
-        record[idx_dst] = locale_item[idx_src] as unknown as TE[keyof TE];
-      }
+    return result;
+}
+
+async function load_oracle_schemas<T extends OracleBaseSchema>(filename: string): Promise<Array<T>> {
+    return load_schemas<T>(filename);
+}
+
+async function load_locale_schemas<T extends LocaleBaseSchema>(filename: string): Promise<Map<string, T>> {
+    const items = await load_schemas<T>(filename);
+    const result = new Map<string, T>();
+    for(const item of items) {
+        result.set(item.code, item);
     }
 
-    await database.manager.save(record);
-    records.push(record);
-  }
+    return result;
+}
 
-  await saveRecord(name, records);
-  log.info(`Record "${name}" saved.`);
+async function write_records<T extends BaseEntity>(filename: string, data: T[]): Promise<void> {
+    const lines = new Array<string>();
+    for(const item of data) {
+        const text = JSON.stringify(item, (k, v) => {
+            return (k.length > 0 && typeof v !== "string") ? undefined : v;
+        }, 2);
+        lines.push(text);
+    }
+
+    const result = "[\n" + lines.join(",\n") + "\n]";
+    await fs.writeFile(filename, result, "utf8");
+}
+
+async function extract_sides(): Promise<void> {
+    const oracle_filename = "data/enUS/v2/sides.json";
+    const locale_filename = "data/zhCN/json/translations/zh-hans/sides.zh-hans.json";
+    const result_filename = "result/sides.json";
+    const oracle_list = await load_oracle_schemas<OracleSideSchema>(oracle_filename);
+    const locale_dict = await load_locale_schemas<LocaleSideSchema>(locale_filename);
+    const records = new Array<SideEntity>();
+    const database = AppDataSource.getRepository(SideEntity);
+    for(const oracle_item of oracle_list) {
+        let record = await database.findOneBy({ codename: oracle_item.id });
+        if(!record) {
+            record = new SideEntity();
+        }
+
+        record.codename = oracle_item.id;
+        record.oracle_name = oracle_item.name;
+        const locale_item = locale_dict.get(oracle_item.id.replace("_", "-"));
+        if(locale_item) {
+            record.locale_name = locale_item.name;
+        }
+
+        await AppDataSource.manager.save(record);
+        records.push(record);
+    }
+
+    await write_records(result_filename, records);
 }
 
 async function main(): Promise<void> {
-  const database = await initialize();
-  await extract<OracleSideSchema, LocaleSideSchema, SideEntity>(database, "sides", SideEntity);
-  await database.destroy();
-  log.info("Disconnected!");
+    await initialize();
+    await extract_sides();
+    await terminate();
 }
 
 main()
-  .then(() => {
-    log.info("Finished!");
-  })
-  .catch((err: Error) => {
-    log.error("Failed with error: " + err.message);
-    log.error("Stacktrace: " + err.stack);
-  });
+    .then(() => {
+        log.info("Finished!");
+    })
+    .catch((err: Error) => {
+        log.error("Failed with error: " + err.message);
+        log.error("Stacktrace: " + err.stack);
+    });
