@@ -43,3 +43,17 @@ export interface LocaleFactionSchema extends LocaleBaseSchema {
     /** 派系描述 */
     readonly description: string;
 }
+
+/** 英文源数据「类型」格式 */
+export interface OracleTypeSchema extends OracleBaseSchema {
+    /** 类型名称 */
+    readonly name: string;
+    /** 类型所属阵营ID */
+    readonly side_id: string;
+}
+
+/** 本地化数据「阵营」格式 */
+export interface LocaleTypeSchema extends LocaleBaseSchema {
+    /** 类型名称 */
+    readonly name: string;
+}

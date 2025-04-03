@@ -63,3 +63,28 @@ export class FactionEntity extends BaseEntity {
     @ManyToOne(() => SideEntity)
     side!: Relation<SideEntity>;
 }
+
+/** 数据库实体「类型」格式 */
+@Entity({ name: "type" })
+export class TypeEntity extends BaseEntity {
+    /** 类型唯一标识 */
+    @Column({ type: "varchar", length: 255 })
+    @Index({ unique: true })
+    codename: string = "";
+
+    /** 类型英文名称 */
+    @Column({ type: "varchar", length: 255 })
+    oracle_name: string = "";
+
+    /** 类型本地化名称 */
+    @Column({ type: "varchar", length: 255 })
+    locale_name: string = "";
+
+    /** 类型所属ID */
+    @Column({ type: "varchar", length: 255 })
+    side_codename: string = "";
+
+    /** 类型所属阵营 */
+    @ManyToOne(() => SideEntity)
+    side!: Relation<SideEntity>;
+}

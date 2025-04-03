@@ -7,8 +7,14 @@ import {
     OracleBaseSchema, LocaleBaseSchema,
     OracleSideSchema, LocaleSideSchema,
     OracleFactionSchema, LocaleFactionSchema,
+    OracleTypeSchema, LocaleTypeSchema,
 } from "./schemas.js";
-import { BaseEntity, FactionEntity, SideEntity } from "./entities.js";
+import {
+    BaseEntity,
+    FactionEntity,
+    SideEntity,
+    TypeEntity,
+} from "./entities.js";
 
 async function initialize(): Promise<void> {
     log.setLevel(log.levels.INFO);
@@ -143,10 +149,46 @@ async function extract_factions(): Promise<Promise<void>> {
     log.info("Save 'factions' finished!");
 }
 
+async function extract_types(): Promise<Promise<void>> {
+    const oracle_filename = "data/enUS/v2/card_types.json";
+    const locale_filename = "data/zhCN/json/translations/zh-hans/types.zh-hans.json";
+    const result_filename = "result/types.json";
+    const oracle_list = await load_oracle_schemas<OracleTypeSchema>(oracle_filename);
+    const locale_dict = await load_locale_schemas<LocaleTypeSchema>(locale_filename);
+    const records = new Array<TypeEntity>();
+    const database = AppDataSource.getRepository(TypeEntity);
+    for(const oracle_item of oracle_list) {
+        let record = await database.findOneBy({ codename: oracle_item.id });
+        if(!record) {
+            record = new TypeEntity();
+        }
+
+        record.codename = oracle_item.id ?? "";
+        record.oracle_name = oracle_item.name ?? "";
+        record.side_codename = oracle_item.side_id ?? "";
+        const side_entity = await AppDataSource.manager.findOneBy(SideEntity, { codename: record.side_codename });
+        if(side_entity) {
+            record.side = side_entity;
+        }
+
+        const locale_item = locale_dict.get(oracle_item.id.replace("_", "-"));
+        if(locale_item) {
+            record.locale_name = locale_item.name ?? "";
+        }
+
+        await database.save(record);
+        records.push(record);
+    }
+
+    await write_records(result_filename, records);
+    log.info("Save 'types' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
     await extract_factions();
+    await extract_types();
     await terminate();
 }
 
