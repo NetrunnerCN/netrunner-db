@@ -3,14 +3,17 @@ import path from "node:path";
 import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
-import { OracleBaseSchema, LocaleBaseSchema } from "./schemas/bases.js";
-import { OracleSideSchema, LocaleSideSchema } from "./schemas/sides.js";
-import { BaseEntity } from "./entities/bases.js";
-import { SideEntity } from "./entities/sides.js";
+import {
+    OracleBaseSchema, LocaleBaseSchema,
+    OracleSideSchema, LocaleSideSchema,
+    OracleFactionSchema, LocaleFactionSchema,
+} from "./schemas.js";
+import { BaseEntity, FactionEntity, SideEntity } from "./entities.js";
 
 async function initialize(): Promise<void> {
     log.setLevel(log.levels.INFO);
     await AppDataSource.initialize();
+    log.info("Database connected!");
 }
 
 async function terminate(): Promise<void> {
@@ -86,23 +89,64 @@ async function extract_sides(): Promise<void> {
             record = new SideEntity();
         }
 
-        record.codename = oracle_item.id;
-        record.oracle_name = oracle_item.name;
+        record.codename = oracle_item.id ?? "";
+        record.oracle_name = oracle_item.name ?? "";
         const locale_item = locale_dict.get(oracle_item.id.replace("_", "-"));
         if(locale_item) {
-            record.locale_name = locale_item.name;
+            record.locale_name = locale_item.name ?? "";
         }
 
-        await AppDataSource.manager.save(record);
+        await database.save(record);
         records.push(record);
     }
 
     await write_records(result_filename, records);
+    log.info("Save 'sides' finished!");
+}
+
+async function extract_factions(): Promise<Promise<void>> {
+    const oracle_filename = "data/enUS/v2/factions.json";
+    const locale_filename = "data/zhCN/json/translations/zh-hans/factions.zh-hans.json";
+    const result_filename = "result/factions.json";
+    const oracle_list = await load_oracle_schemas<OracleFactionSchema>(oracle_filename);
+    const locale_dict = await load_locale_schemas<LocaleFactionSchema>(locale_filename);
+    const records = new Array<FactionEntity>();
+    const database = AppDataSource.getRepository(FactionEntity);
+    for(const oracle_item of oracle_list) {
+        let record = await database.findOneBy({ codename: oracle_item.id });
+        if(!record) {
+            record = new FactionEntity();
+        }
+
+        record.codename = oracle_item.id ?? "";
+        record.oracle_name = oracle_item.name ?? "";
+        record.oracle_desc = oracle_item.description ?? "";
+        record.color = oracle_item.color ?? "";
+        record.is_mini = oracle_item.is_mini === undefined ? "" : oracle_item.is_mini.toString();
+        record.side_codename = oracle_item.side_id ?? "";
+        const side_entity = await AppDataSource.manager.findOneBy(SideEntity, { codename: record.side_codename });
+        if(side_entity) {
+            record.side = side_entity;
+        }
+
+        const locale_item = locale_dict.get(oracle_item.id.replace("_", "-"));
+        if(locale_item) {
+            record.locale_name = locale_item.name ?? "";
+            record.locale_desc = locale_item.description ?? "";
+        }
+
+        await database.save(record);
+        records.push(record);
+    }
+
+    await write_records(result_filename, records);
+    log.info("Save 'factions' finished!");
 }
 
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
+    await extract_factions();
     await terminate();
 }
 
