@@ -6,37 +6,37 @@ export abstract class BaseEntity {
     id!: number;
 }
 
-/** 数据库实体「阵营」格式 */
+/** 数据库实体「阵营」 */
 @Entity({ name: "side" })
 export class SideEntity extends BaseEntity {
     /** 阵营唯一标识 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     @Index({ unique: true })
     codename: string = "";
 
     /** 阵营英文名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     oracle_name: string = "";
 
     /** 阵营本地化名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     locale_name: string = "";
 }
 
-/** 数据库实体「派系」格式 */
+/** 数据库实体「派系」 */
 @Entity({ name: "faction" })
 export class FactionEntity extends BaseEntity {
     /** 派系唯一标识 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     @Index({ unique: true })
     codename: string = "";
 
     /** 派系英文名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     oracle_name: string = "";
 
     /** 派系本地化名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     locale_name: string = "";
 
     /** 派系英文描述 */
@@ -48,15 +48,15 @@ export class FactionEntity extends BaseEntity {
     locale_desc: string = "";
 
     /** 派系颜色 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     color: string = "";
 
     /** 派系是否为迷你派系 */
-    @Column({ type: "varchar", length: 255 })
-    is_mini: string = "";
+    @Column()
+    is_mini: boolean = false;
 
     /** 派系所属阵营ID */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     side_codename: string = "";
 
     /** 派系所属阵营 */
@@ -64,24 +64,24 @@ export class FactionEntity extends BaseEntity {
     side!: Relation<SideEntity>;
 }
 
-/** 数据库实体「类型」格式 */
+/** 数据库实体「类型」 */
 @Entity({ name: "type" })
 export class TypeEntity extends BaseEntity {
     /** 类型唯一标识 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     @Index({ unique: true })
     codename: string = "";
 
     /** 类型英文名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     oracle_name: string = "";
 
     /** 类型本地化名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     locale_name: string = "";
 
     /** 类型所属ID */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     side_codename: string = "";
 
     /** 类型所属阵营 */
@@ -89,37 +89,37 @@ export class TypeEntity extends BaseEntity {
     side!: Relation<SideEntity>;
 }
 
-/** 数据库实体「子类型」格式 */
+/** 数据库实体「子类型」 */
 @Entity({ name: "subtype" })
 export class SubtypeEntity extends BaseEntity {
     /** 子类型唯一标识 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     @Index({ unique: true })
     codename: string = "";
 
     /** 子类型英文名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     oracle_name: string = "";
 
     /** 子类型本地化名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     locale_name: string = "";
 }
 
-/** 数据库实体「卡包类型」格式 */
+/** 数据库实体「卡包类型」 */
 @Entity({ name: "settype" })
 export class SettypeEntity extends BaseEntity {
     /** 卡包类型唯一标识 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     @Index({ unique: true })
     codename: string = "";
 
     /** 卡包类型英文名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     oracle_name: string = "";
 
     /** 卡包类型本地化名称 */
-    @Column({ type: "varchar", length: 255 })
+    @Column()
     locale_name: string = "";
 
     /** 卡包类型英文描述 */
