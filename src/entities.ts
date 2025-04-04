@@ -88,3 +88,20 @@ export class TypeEntity extends BaseEntity {
     @ManyToOne(() => SideEntity)
     side!: Relation<SideEntity>;
 }
+
+/** 数据库实体「子类型」格式 */
+@Entity({ name: "subtype" })
+export class SubtypeEntity extends BaseEntity {
+    /** 子类型唯一标识 */
+    @Column({ type: "varchar", length: 255 })
+    @Index({ unique: true })
+    codename: string = "";
+
+    /** 子类型英文名称 */
+    @Column({ type: "varchar", length: 255 })
+    oracle_name: string = "";
+
+    /** 子类型本地化名称 */
+    @Column({ type: "varchar", length: 255 })
+    locale_name: string = "";
+}

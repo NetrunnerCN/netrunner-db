@@ -57,3 +57,15 @@ export interface LocaleTypeSchema extends LocaleBaseSchema {
     /** 类型名称 */
     readonly name: string;
 }
+
+/** 英文源数据「子类型」格式 */
+export interface OracleSubtypeSchema extends OracleBaseSchema {
+    /** 子类型名称 */
+    readonly name: string;
+}
+
+/** 本地化数据「子类型」格式 */
+export interface LocaleSubtypeSchema extends LocaleBaseSchema {
+    /** 子类型名称 */
+    readonly name: string;
+}

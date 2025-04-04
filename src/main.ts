@@ -8,12 +8,14 @@ import {
     OracleSideSchema, LocaleSideSchema,
     OracleFactionSchema, LocaleFactionSchema,
     OracleTypeSchema, LocaleTypeSchema,
+    OracleSubtypeSchema, LocaleSubtypeSchema,
 } from "./schemas.js";
 import {
     BaseEntity,
     FactionEntity,
     SideEntity,
     TypeEntity,
+    SubtypeEntity,
 } from "./entities.js";
 
 async function initialize(): Promise<void> {
@@ -184,11 +186,41 @@ async function extract_types(): Promise<Promise<void>> {
     log.info("Save 'types' finished!");
 }
 
+async function extract_subtypes(): Promise<void> {
+    const oracle_filename = "data/enUS/v2/card_subtypes.json";
+    const locale_filename = "data/zhCN/json/translations/zh-hans/subtypes.zh-hans.json";
+    const result_filename = "result/subtypes.json";
+    const oracle_list = await load_oracle_schemas<OracleSubtypeSchema>(oracle_filename);
+    const locale_dict = await load_locale_schemas<LocaleSubtypeSchema>(locale_filename);
+    const records = new Array<SubtypeEntity>();
+    const database = AppDataSource.getRepository(SubtypeEntity);
+    for(const oracle_item of oracle_list) {
+        let record = await database.findOneBy({ codename: oracle_item.id });
+        if(!record) {
+            record = new SubtypeEntity();
+        }
+
+        record.codename = oracle_item.id ?? "";
+        record.oracle_name = oracle_item.name ?? "";
+        const locale_item = locale_dict.get(oracle_item.id.replace("_", "-"));
+        if(locale_item) {
+            record.locale_name = locale_item.name ?? "";
+        }
+
+        await database.save(record);
+        records.push(record);
+    }
+
+    await write_records(result_filename, records);
+    log.info("Save 'subtypes' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
     await extract_factions();
     await extract_types();
+    await extract_subtypes();
     await terminate();
 }
 
