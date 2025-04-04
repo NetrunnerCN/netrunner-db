@@ -69,3 +69,19 @@ export interface LocaleSubtypeSchema extends LocaleBaseSchema {
     /** 子类型名称 */
     readonly name: string;
 }
+
+/** 英文源数据「卡包类型」格式 */
+export interface OracleSettypeSchema extends OracleBaseSchema {
+    /** 卡包类型名称 */
+    readonly name: string;
+    /** 卡包类型描述 */
+    readonly description: string;
+}
+
+/** 本地化数据「卡包类型」格式 */
+export interface LocaleSettypeSchema extends LocaleBaseSchema {
+    /** 卡包类型名称 */
+    readonly name: string;
+    /** 卡包类型描述 */
+    readonly description: string;
+}

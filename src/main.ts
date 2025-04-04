@@ -9,14 +9,16 @@ import {
     OracleFactionSchema, LocaleFactionSchema,
     OracleTypeSchema, LocaleTypeSchema,
     OracleSubtypeSchema, LocaleSubtypeSchema,
-} from "./schemas.js";
+    OracleSettypeSchema, LocaleSettypeSchema,
+} from './schemas.js';
 import {
     BaseEntity,
     FactionEntity,
     SideEntity,
     TypeEntity,
     SubtypeEntity,
-} from "./entities.js";
+    SettypeEntity,
+} from './entities.js';
 
 async function initialize(): Promise<void> {
     log.setLevel(log.levels.INFO);
@@ -215,12 +217,44 @@ async function extract_subtypes(): Promise<void> {
     log.info("Save 'subtypes' finished!");
 }
 
+async function extract_settypes(): Promise<void> {
+    const oracle_filename = "data/enUS/v2/card_set_types.json";
+    const locale_filename = "data/zhCN/json/translations/zh-hans/set_types.zh-hans.json";
+    const result_filename = "result/set_types.json";
+    const oracle_list = await load_oracle_schemas<OracleSettypeSchema>(oracle_filename);
+    const locale_dict = await load_locale_schemas<LocaleSettypeSchema>(locale_filename);
+    const records = new Array<SettypeEntity>();
+    const database = AppDataSource.getRepository(SettypeEntity);
+    for(const oracle_item of oracle_list) {
+        let record = await database.findOneBy({ codename: oracle_item.id });
+        if(!record) {
+            record = new SettypeEntity();
+        }
+
+        record.codename = oracle_item.id ?? "";
+        record.oracle_name = oracle_item.name ?? "";
+        record.oracle_desc = oracle_item.description ?? "";
+        const locale_item = locale_dict.get(oracle_item.id.replace("_", "-"));
+        if(locale_item) {
+            record.locale_name = locale_item.name ?? "";
+            record.locale_desc = locale_item.description ?? "";
+        }
+
+        await database.save(record);
+        records.push(record);
+    }
+
+    await write_records(result_filename, records);
+    log.info("Save 'set_types' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
     await extract_factions();
     await extract_types();
     await extract_subtypes();
+    await extract_settypes();
     await terminate();
 }
 

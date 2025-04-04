@@ -9,7 +9,7 @@ export abstract class BaseEntity {
 /** 数据库实体「阵营」格式 */
 @Entity({ name: "side" })
 export class SideEntity extends BaseEntity {
-    /** 阵营唯一标识符 */
+    /** 阵营唯一标识 */
     @Column({ type: "varchar", length: 255 })
     @Index({ unique: true })
     codename: string = "";
@@ -104,4 +104,29 @@ export class SubtypeEntity extends BaseEntity {
     /** 子类型本地化名称 */
     @Column({ type: "varchar", length: 255 })
     locale_name: string = "";
+}
+
+/** 数据库实体「卡包类型」格式 */
+@Entity({ name: "settype" })
+export class SettypeEntity extends BaseEntity {
+    /** 卡包类型唯一标识 */
+    @Column({ type: "varchar", length: 255 })
+    @Index({ unique: true })
+    codename: string = "";
+
+    /** 卡包类型英文名称 */
+    @Column({ type: "varchar", length: 255 })
+    oracle_name: string = "";
+
+    /** 卡包类型本地化名称 */
+    @Column({ type: "varchar", length: 255 })
+    locale_name: string = "";
+
+    /** 卡包类型英文描述 */
+    @Column({ type: "varchar", length: 1000 })
+    oracle_desc: string = "";
+
+    /** 卡包类型本地化描述 */
+    @Column({ type: "varchar", length: 1000 })
+    locale_desc: string = "";
 }
