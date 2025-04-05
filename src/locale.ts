@@ -3,7 +3,15 @@ import log from "loglevel";
 import { parse } from "csv-parse/sync";
 
 import { AppDataSource } from "./data-source.js";
-import { SideEntity, FactionEntity, TypeEntity, SubtypeEntity, SettypeEntity, CycleEntity } from './entities.js';
+import {
+    SideEntity,
+    FactionEntity,
+    TypeEntity,
+    SubtypeEntity,
+    SettypeEntity,
+    CycleEntity,
+    SetEntity,
+} from './entities.js';
 
 
 /** 本地化数据通用字段 */
@@ -49,6 +57,12 @@ interface SettypeSchema extends BaseSchema {
 /** 本地化数据「循环」 */
 interface CycleSchema extends BaseSchema {
     /** 循环名称 */
+    readonly name: string;
+}
+
+/** 本地化数据「卡包」 */
+interface SetSchema extends BaseSchema {
+    /** 卡包名称 */
     readonly name: string;
 }
 
@@ -169,6 +183,22 @@ async function extract_cycles(): Promise<void> {
     log.info("Save 'cycles' finished!");
 }
 
+async function extract_sets(): Promise<void> {
+    const schemas = await load_schemas<SetSchema>("data/Locale/data/sets.csv");
+    const database = AppDataSource.getRepository(SetEntity);
+    for(const schema of schemas) {
+        const record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            continue;
+        }
+
+        record.locale_name = schema.name ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'sets' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -177,6 +207,7 @@ async function main(): Promise<void> {
     await extract_subtypes();
     await extract_settypes();
     await extract_cycles();
+    await extract_sets();
     await terminate();
 }
 

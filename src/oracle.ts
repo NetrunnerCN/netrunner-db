@@ -5,7 +5,7 @@ import log from "loglevel";
 import { AppDataSource } from "./data-source.js";
 import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
-    SettypeEntity, CycleEntity,
+    SettypeEntity, CycleEntity, SetEntity,
 } from './entities.js';
 
 
@@ -66,6 +66,26 @@ interface CycleSchema extends BaseSchema {
     /** 循环序号 */
     readonly position: number;
     /** 循环发行组 */
+    readonly released_by: string;
+}
+
+/** 英文源数据「卡包」 */
+interface SetSchema extends BaseSchema {
+    /** 卡包名称 */
+    readonly name: string;
+    /** 卡包旧版唯一标识符 */
+    readonly legacy_code: string;
+    /** 卡包所属循环ID */
+    readonly card_cycle_id: string;
+    /** 卡包所属卡包类型ID */
+    readonly card_set_type_id: string;
+    /** 卡包发行日期 */
+    readonly date_release: string;
+    /** 卡包在循环中位置 */
+    readonly position: number;
+    /** 卡包卡牌数量 */
+    readonly size: number;
+    /** 卡包发行组 */
     readonly released_by: string;
 }
 
@@ -228,6 +248,40 @@ async function extract_cycles(): Promise<void> {
     log.info("Save 'cycles' finished!");
 }
 
+async function extract_sets(): Promise<void> {
+    const schemas = await load_schemas<SetSchema>("data/Oracle/v2/card_sets.json");
+    const database = AppDataSource.getRepository(SetEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new SetEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        record.cycle_codename = schema.card_cycle_id ?? "";
+        record.settype_codename = schema.card_set_type_id ?? "";
+        record.release_date = schema.date_release ?? "";
+        record.position = schema.position ?? 0;
+        record.size = schema.size ?? 0;
+        record.released_by = schema.released_by ?? "";
+
+        const cycle_entity = await AppDataSource.manager.findOneBy(CycleEntity, { codename: record.cycle_codename });
+        if(cycle_entity) {
+            record.cycle = cycle_entity;
+        }
+
+        const settype_entity = await AppDataSource.manager.findOneBy(SettypeEntity, { codename: record.settype_codename });
+        if(settype_entity) {
+            record.settype = settype_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'cycles' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -236,6 +290,7 @@ async function main(): Promise<void> {
     await extract_subtypes();
     await extract_settypes();
     await extract_cycles();
+    await extract_sets();
     await terminate();
 }
 
