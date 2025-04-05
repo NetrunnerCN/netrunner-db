@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, PoolEntity,
+    FormatEntity, PoolEntity, RestrictionEntity,
 } from './entities.js';
 
 export const AppDataSource = new DataSource({
@@ -13,7 +13,7 @@ export const AppDataSource = new DataSource({
     entities: [
         SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
         SettypeEntity, CycleEntity, SetEntity,
-        FormatEntity, PoolEntity
+        FormatEntity, PoolEntity, RestrictionEntity
     ],
     migrations: ["./migrations/*.ts"],
 });

@@ -7,7 +7,7 @@ import {
     SPLITTER,
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, PoolEntity,
+    FormatEntity, PoolEntity, RestrictionEntity,
 } from './entities.js';
 
 
@@ -121,6 +121,30 @@ interface PoolSchema extends BaseSchema {
     readonly card_cycle_ids: string[];
     /** 卡池包含卡包ID */
     readonly card_set_ids: string[];
+}
+
+/** 英文数据源「禁限表」 */
+interface RestrictionSchema extends BaseSchema {
+    /** 禁限表名称 */
+    readonly name: string;
+    /** 禁限表所属环境ID */
+    readonly format_id: string;
+    /** 禁限表开始日期 */
+    readonly date_start: string;
+    /** 禁限表禁止卡牌ID */
+    readonly banned: string[];
+    /** (暂不使用) */
+    readonly restricted: string[];
+    /** 禁限表禁止子类型ID */
+    readonly subtypes: { readonly banned: string[]; };
+    /** (暂不使用) */
+    readonly universal_faction_cost: { readonly [key: string]: string[]; }
+    /** (暂不使用) */
+    readonly global_penalty: { readonly [key: string]: string[] };
+    /** (暂不使用) */
+    readonly points: { readonly [key: string]: string[] };
+    /** (暂不使用) */
+    readonly point_limit: number;
 }
 
 
@@ -360,7 +384,39 @@ async function extract_pools(): Promise<void> {
         await database.save(record);
     }
 
-    log.info("Save 'formats' finished!");
+    log.info("Save 'pools' finished!");
+}
+
+async function extract_restrictions(): Promise<void> {
+    const schemas = await load_schemas<RestrictionSchema>("data/Oracle/v2/restrictions");
+    const database = AppDataSource.getRepository(RestrictionEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new RestrictionEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        record.format_codename = schema.format_id ?? "";
+        record.start_date = schema.date_start ?? "";
+        if(schema.banned && schema.banned.length > 0) {
+            record.banned_card_codename_list = schema.banned.join(SPLITTER);
+        }
+
+        if(schema.subtypes && schema.subtypes.banned && schema.subtypes.banned.length > 0) {
+            record.banned_subtype_codename_list = schema.subtypes.banned.join(SPLITTER);
+        }
+
+        const format_entity = await AppDataSource.manager.findOneBy(FormatEntity, { codename: record.format_codename });
+        if(format_entity) {
+            record.format = format_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'restrictions' finished!");
 }
 
 async function main(): Promise<void> {
@@ -374,6 +430,7 @@ async function main(): Promise<void> {
     await extract_sets();
     await extract_formats();
     await extract_pools();
+    await extract_restrictions();
     await terminate();
 }
 
