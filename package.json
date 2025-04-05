@@ -26,6 +26,7 @@
     "vitest": "~2.1"
   },
   "scripts": {
+    "start": "npm run oracle && npm run locale && npm run archive",
     "oracle": "node build/src/oracle.js",
     "locale": "node build/src/locale.js",
     "archive": "node build/src/archive.js",

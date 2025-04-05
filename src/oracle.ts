@@ -3,7 +3,7 @@ import path from "node:path";
 import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
-import { SideEntity, FactionEntity } from "./entities.js";
+import { SideEntity, FactionEntity, TypeEntity } from './entities.js';
 
 
 /** 英文源数据通用字段 */
@@ -32,14 +32,14 @@ interface FactionSchema extends BaseSchema {
     readonly is_mini: boolean;
 }
 
-// /** 英文源数据「类型」 */
-// interface TypeSchema extends BaseSchema {
-//     /** 类型名称 */
-//     readonly name: string;
-//     /** 类型所属阵营ID */
-//     readonly side_id: string;
-// }
-//
+/** 英文源数据「类型」 */
+interface TypeSchema extends BaseSchema {
+    /** 类型名称 */
+    readonly name: string;
+    /** 类型所属阵营ID */
+    readonly side_id: string;
+}
+
 // /** 英文源数据「子类型」 */
 // interface SubtypeSchema extends BaseSchema {
 //     /** 子类型名称 */
@@ -136,10 +136,34 @@ async function extract_factions(): Promise<void> {
     log.info("Save 'factions' finished!");
 }
 
+async function extract_types(): Promise<void> {
+    const schemas = await load_schemas<TypeSchema>("data/Oracle/v2/card_types.json");
+    const database = AppDataSource.getRepository(TypeEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new TypeEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        record.side_codename = schema.side_id ?? "";
+        const side_entity = await AppDataSource.manager.findOneBy(SideEntity, { codename: record.side_codename });
+        if(side_entity) {
+            record.side = side_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'types' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
     await extract_factions();
+    await extract_types();
     await terminate();
 }
 

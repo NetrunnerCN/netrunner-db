@@ -7,7 +7,7 @@ export abstract class BaseEntity {
 }
 
 /** 数据库实体「阵营」 */
-@Entity({ name: "side" })
+@Entity({ name: "sides" })
 export class SideEntity extends BaseEntity {
     /** 阵营唯一标识 */
     @Column()
@@ -24,7 +24,7 @@ export class SideEntity extends BaseEntity {
 }
 
 /** 数据库实体「派系」 */
-@Entity({ name: "faction" })
+@Entity({ name: "factions" })
 export class FactionEntity extends BaseEntity {
     /** 派系唯一标识 */
     @Column()
@@ -65,7 +65,7 @@ export class FactionEntity extends BaseEntity {
 }
 
 /** 数据库实体「类型」 */
-@Entity({ name: "type" })
+@Entity({ name: "types" })
 export class TypeEntity extends BaseEntity {
     /** 类型唯一标识 */
     @Column()
@@ -90,7 +90,7 @@ export class TypeEntity extends BaseEntity {
 }
 
 /** 数据库实体「子类型」 */
-@Entity({ name: "subtype" })
+@Entity({ name: "subtypes" })
 export class SubtypeEntity extends BaseEntity {
     /** 子类型唯一标识 */
     @Column()
@@ -107,7 +107,7 @@ export class SubtypeEntity extends BaseEntity {
 }
 
 /** 数据库实体「卡包类型」 */
-@Entity({ name: "settype" })
+@Entity({ name: "settypes" })
 export class SettypeEntity extends BaseEntity {
     /** 卡包类型唯一标识 */
     @Column()

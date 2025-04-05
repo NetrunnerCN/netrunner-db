@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
-import { SideEntity, FactionEntity, BaseEntity } from "./entities.js";
+import { BaseEntity, SideEntity, FactionEntity, TypeEntity } from "./entities.js";
 import { EntityTarget } from "typeorm";
 
 
@@ -30,6 +30,7 @@ async function main(): Promise<void> {
     await initialize();
     await extract(SideEntity, "result/sides.json");
     await extract(FactionEntity, "result/factions.json");
+    await extract(TypeEntity, "result/types.json");
     await terminate();
 }
 
