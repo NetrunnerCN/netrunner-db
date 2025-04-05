@@ -3,7 +3,7 @@ import path from "node:path";
 import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
-import { SideEntity, FactionEntity, TypeEntity } from './entities.js';
+import { SideEntity, FactionEntity, TypeEntity, SubtypeEntity } from './entities.js';
 
 
 /** 英文源数据通用字段 */
@@ -40,12 +40,12 @@ interface TypeSchema extends BaseSchema {
     readonly side_id: string;
 }
 
-// /** 英文源数据「子类型」 */
-// interface SubtypeSchema extends BaseSchema {
-//     /** 子类型名称 */
-//     readonly name: string;
-// }
-//
+/** 英文源数据「子类型」 */
+interface SubtypeSchema extends BaseSchema {
+    /** 子类型名称 */
+    readonly name: string;
+}
+
 // /** 英文源数据「卡包类型」 */
 // interface SettypeSchema extends BaseSchema {
 //     /** 卡包类型名称 */
@@ -159,11 +159,29 @@ async function extract_types(): Promise<void> {
     log.info("Save 'types' finished!");
 }
 
+async function extract_subtypes(): Promise<void> {
+    const schemas = await load_schemas<SubtypeSchema>("data/Oracle/v2/card_subtypes.json");
+    const database = AppDataSource.getRepository(SubtypeEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new SubtypeEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'subtypes' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
     await extract_factions();
     await extract_types();
+    await extract_subtypes();
     await terminate();
 }
 

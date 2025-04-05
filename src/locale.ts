@@ -3,7 +3,7 @@ import log from "loglevel";
 import { parse } from "csv-parse/sync";
 
 import { AppDataSource } from "./data-source.js";
-import { SideEntity, FactionEntity, TypeEntity } from "./entities.js";
+import { SideEntity, FactionEntity, TypeEntity, SubtypeEntity } from './entities.js';
 
 
 /** 本地化数据通用字段 */
@@ -32,12 +32,12 @@ interface TypeSchema extends BaseSchema {
     readonly name: string;
 }
 
-// /** 本地化数据「子类型」 */
-// interface SubtypeSchema extends BaseSchema {
-//     /** 子类型名称 */
-//     readonly name: string;
-// }
-//
+/** 本地化数据「子类型」 */
+interface SubtypeSchema extends BaseSchema {
+    /** 子类型名称 */
+    readonly name: string;
+}
+
 // /** 本地化数据「卡包类型」 */
 // interface SettypeSchema extends BaseSchema {
 //     /** 卡包类型名称 */
@@ -114,11 +114,28 @@ async function extract_types(): Promise<void> {
     log.info("Save 'types' finished!");
 }
 
+async function extract_subtypes(): Promise<void> {
+    const schemas = await load_schemas<SubtypeSchema>("data/Locale/data/subtypes.csv");
+    const database = AppDataSource.getRepository(SubtypeEntity);
+    for(const schema of schemas) {
+        const record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            continue;
+        }
+
+        record.locale_name = schema.name ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'subtypes' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
     await extract_factions();
     await extract_types();
+    await extract_subtypes();
     await terminate();
 }
 
