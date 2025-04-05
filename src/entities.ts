@@ -1,5 +1,7 @@
 import { Column, Entity, Index, ManyToOne, PrimaryGeneratedColumn, Relation } from 'typeorm';
 
+export const SPLITTER: string = "|||";
+
 /** 数据库实体通用字段 */
 export abstract class BaseEntity {
     @PrimaryGeneratedColumn()
@@ -220,4 +222,41 @@ export class FormatEntity extends BaseEntity {
     /** 赛制本地化名称 */
     @Column()
     locale_name: string = "";
+}
+
+/** 数据库实体「卡池」 */
+@Entity({ name: "pools" })
+export class PoolEntity extends BaseEntity {
+    /** 卡池唯一标识 */
+    @Column()
+    @Index({ unique: true })
+    codename: string = "";
+
+    /** 卡池英文名称 */
+    @Column()
+    oracle_name: string = "";
+
+    /** 卡池所属赛制ID */
+    @Column()
+    format_codename: string = "";
+
+    /** 卡池所属赛制 */
+    @ManyToOne(() => FormatEntity)
+    format!: Relation<FormatEntity>
+
+    /** 卡池包含卡包ID */
+    @Column({ type: "varchar", length: 5000 })
+    set_codename_list: string = "";
+
+    public get set_codenames(): string[] {
+        return this.set_codename_list.split(SPLITTER);
+    }
+
+    /** 卡池包含循环ID */
+    @Column({ type: "varchar", length: 5000 })
+    cycle_codename_list: string = "";
+
+    public get cycle_codenames(): string[] {
+        return this.cycle_codename_list.split(SPLITTER);
+    }
 }

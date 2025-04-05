@@ -3,9 +3,10 @@ import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
 import {
+    SPLITTER,
     BaseEntity, SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity,
+    FormatEntity, PoolEntity,
 } from './entities.js';
 import { EntityTarget } from "typeorm";
 
@@ -24,7 +25,15 @@ async function extract<T extends BaseEntity>(type: EntityTarget<T>, filename: st
     const database = AppDataSource.getRepository(type);
     const items = await database.find();
     const content = JSON.stringify(items, (k, v) => {
-        return k === "id" ? undefined : v;
+        if(k === "id") {
+            return undefined;
+        }
+
+        if(k.endsWith("list")) {
+            return (v && v.length > 0 ) ? v.split(SPLITTER) : [];
+        }
+
+        return v;
     }, 2);
     await fs.writeFile(filename, content, "utf8");
     log.info(`Save '${filename}' finished!`);
@@ -40,6 +49,7 @@ async function main(): Promise<void> {
     await extract(CycleEntity, "result/cycles.json");
     await extract(SetEntity, "result/sets.json");
     await extract(FormatEntity, "result/formats.json");
+    await extract(PoolEntity, "result/pools.json");
     await terminate();
 }
 

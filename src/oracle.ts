@@ -4,9 +4,10 @@ import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
 import {
+    SPLITTER,
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity,
+    FormatEntity, PoolEntity,
 } from './entities.js';
 
 
@@ -108,6 +109,18 @@ interface SnapshotSchema extends BaseSchema {
     readonly restriction_id: string;
     /** 是否正在使用 */
     readonly active: boolean;
+}
+
+/** 英文源数据「卡池」 */
+interface PoolSchema extends BaseSchema {
+    /** 卡池名称 */
+    readonly name: string;
+    /** 卡池所属环境ID */
+    readonly format_id: string;
+    /** 卡池包含循环ID */
+    readonly card_cycle_ids: string[];
+    /** 卡池包含卡包ID */
+    readonly card_set_ids: string[];
 }
 
 
@@ -320,6 +333,36 @@ async function extract_formats(): Promise<void> {
     log.info("Save 'formats' finished!");
 }
 
+async function extract_pools(): Promise<void> {
+    const schemas = await load_schemas<PoolSchema>("data/Oracle/v2/card_pools");
+    const database = AppDataSource.getRepository(PoolEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new PoolEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        record.format_codename = schema.format_id ?? "";
+        if(schema.card_cycle_ids && schema.card_cycle_ids.length > 0) {
+            record.cycle_codename_list = schema.card_cycle_ids.join(SPLITTER);
+        }
+        if(schema.card_set_ids && schema.card_set_ids.length > 0) {
+            record.set_codename_list = schema.card_set_ids.join(SPLITTER);
+        }
+
+        const format_entity = await AppDataSource.manager.findOneBy(FormatEntity, { codename: record.format_codename });
+        if(format_entity) {
+            record.format = format_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'formats' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -330,6 +373,7 @@ async function main(): Promise<void> {
     await extract_cycles();
     await extract_sets();
     await extract_formats();
+    await extract_pools();
     await terminate();
 }
 
