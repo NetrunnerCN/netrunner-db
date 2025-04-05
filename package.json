@@ -28,6 +28,7 @@
   "scripts": {
     "oracle": "node build/src/oracle.js",
     "locale": "node build/src/locale.js",
+    "archive": "node build/src/archive.js",
     "clean": "rimraf coverage build tmp",
     "prebuild": "npm run lint",
     "build": "tsc -p tsconfig.json",
