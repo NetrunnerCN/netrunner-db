@@ -4,13 +4,9 @@ import { parse } from "csv-parse/sync";
 
 import { AppDataSource } from "./data-source.js";
 import {
-    SideEntity,
-    FactionEntity,
-    TypeEntity,
-    SubtypeEntity,
-    SettypeEntity,
-    CycleEntity,
-    SetEntity,
+    SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
+    SettypeEntity, CycleEntity, SetEntity,
+    FormatEntity,
 } from './entities.js';
 
 
@@ -66,6 +62,11 @@ interface SetSchema extends BaseSchema {
     readonly name: string;
 }
 
+/** 本地化数据「赛制」 */
+interface FormatSchema extends BaseSchema {
+    /** 赛制名称 */
+    readonly name: string;
+}
 
 async function initialize(): Promise<void> {
     log.setLevel(log.levels.INFO);
@@ -199,6 +200,22 @@ async function extract_sets(): Promise<void> {
     log.info("Save 'sets' finished!");
 }
 
+async function extract_formats(): Promise<void> {
+    const schemas = await load_schemas<FormatSchema>("data/Locale/data/formats.csv");
+    const database = AppDataSource.getRepository(FormatEntity);
+    for(const schema of schemas) {
+        const record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            continue;
+        }
+
+        record.locale_name = schema.name ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'formats' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -208,6 +225,7 @@ async function main(): Promise<void> {
     await extract_settypes();
     await extract_cycles();
     await extract_sets();
+    await extract_formats();
     await terminate();
 }
 

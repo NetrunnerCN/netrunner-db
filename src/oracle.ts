@@ -6,6 +6,7 @@ import { AppDataSource } from "./data-source.js";
 import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
+    FormatEntity,
 } from './entities.js';
 
 
@@ -87,6 +88,26 @@ interface SetSchema extends BaseSchema {
     readonly size: number;
     /** 卡包发行组 */
     readonly released_by: string;
+}
+
+/** 英文源数据「赛制」 */
+interface FormatSchema extends BaseSchema {
+    /** 赛制名称 */
+    readonly name: string;
+    /** 赛制历代环境 */
+    readonly snapshots: SnapshotSchema[];
+}
+
+/** 英文源数据「环境」 */
+interface SnapshotSchema extends BaseSchema {
+    /** 环境开始时间 */
+    readonly date_start: string;
+    /** 环境使用卡池ID */
+    readonly card_pool_id: string;
+    /** 环境使用禁限表ID */
+    readonly restriction_id: string;
+    /** 是否正在使用 */
+    readonly active: boolean;
 }
 
 
@@ -279,7 +300,24 @@ async function extract_sets(): Promise<void> {
         await database.save(record);
     }
 
-    log.info("Save 'cycles' finished!");
+    log.info("Save 'sets' finished!");
+}
+
+async function extract_formats(): Promise<void> {
+    const schemas = await load_schemas<FormatSchema>("data/Oracle/v2/formats");
+    const database = AppDataSource.getRepository(FormatEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new FormatEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'formats' finished!");
 }
 
 async function main(): Promise<void> {
@@ -291,6 +329,7 @@ async function main(): Promise<void> {
     await extract_settypes();
     await extract_cycles();
     await extract_sets();
+    await extract_formats();
     await terminate();
 }
 

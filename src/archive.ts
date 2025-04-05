@@ -5,6 +5,7 @@ import { AppDataSource } from "./data-source.js";
 import {
     BaseEntity, SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
+    FormatEntity,
 } from './entities.js';
 import { EntityTarget } from "typeorm";
 
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
     await extract(SettypeEntity, "result/settypes.json");
     await extract(CycleEntity, "result/cycles.json");
     await extract(SetEntity, "result/sets.json");
+    await extract(FormatEntity, "result/formats.json");
     await terminate();
 }
 
