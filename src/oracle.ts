@@ -3,7 +3,10 @@ import path from "node:path";
 import log from "loglevel";
 
 import { AppDataSource } from "./data-source.js";
-import { SideEntity, FactionEntity, TypeEntity, SubtypeEntity, SettypeEntity } from './entities.js';
+import {
+    SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
+    SettypeEntity, CycleEntity,
+} from './entities.js';
 
 
 /** 英文源数据通用字段 */
@@ -52,6 +55,18 @@ interface SettypeSchema extends BaseSchema {
     readonly name: string;
     /** 卡包类型描述 */
     readonly description: string;
+}
+
+/** 英文源数据「循环」 */
+interface CycleSchema extends BaseSchema {
+    /** 循环名称 */
+    readonly name: string;
+    /** 循环旧版唯一标识符 */
+    readonly legacy_code: string;
+    /** 循环序号 */
+    readonly position: number;
+    /** 循环发行组 */
+    readonly released_by: string;
 }
 
 
@@ -194,6 +209,25 @@ async function extract_settypes(): Promise<void> {
     log.info("Save 'settypes' finished!");
 }
 
+async function extract_cycles(): Promise<void> {
+    const schemas = await load_schemas<CycleSchema>("data/Oracle/v2/card_cycles.json");
+    const database = AppDataSource.getRepository(CycleEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new CycleEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_name = schema.name ?? "";
+        record.position = schema.position ?? 0;
+        record.released_by = schema.released_by ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'cycles' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -201,6 +235,7 @@ async function main(): Promise<void> {
     await extract_types();
     await extract_subtypes();
     await extract_settypes();
+    await extract_cycles();
     await terminate();
 }
 

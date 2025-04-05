@@ -2,8 +2,8 @@ import connection from "./connection.json" with { type: "json" };
 import { DataSource } from "typeorm";
 import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
-    SettypeEntity,
-} from "./entities.js";
+    SettypeEntity, CycleEntity,
+} from './entities.js';
 
 export const AppDataSource = new DataSource({
     ...connection,
@@ -11,7 +11,7 @@ export const AppDataSource = new DataSource({
     logging: ["error", "warn", "info", "log", "migration"],
     entities: [
         SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
-        SettypeEntity,
+        SettypeEntity, CycleEntity
     ],
     migrations: ["./migrations/*.ts"],
 });
