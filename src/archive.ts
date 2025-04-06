@@ -6,7 +6,7 @@ import {
     SPLITTER,
     BaseEntity, SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, PoolEntity, RestrictionEntity,
+    FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
 } from './entities.js';
 import { EntityTarget } from "typeorm";
 
@@ -51,6 +51,7 @@ async function main(): Promise<void> {
     await extract(FormatEntity, "result/formats.json");
     await extract(PoolEntity, "result/pools.json");
     await extract(RestrictionEntity, "result/restrictions.json");
+    await extract(SnapshotEntity, "result/snapshots.json");
     await terminate();
 }
 

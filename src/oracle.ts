@@ -7,7 +7,7 @@ import {
     SPLITTER,
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, PoolEntity, RestrictionEntity,
+    FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
 } from './entities.js';
 
 
@@ -419,6 +419,45 @@ async function extract_restrictions(): Promise<void> {
     log.info("Save 'restrictions' finished!");
 }
 
+async function extract_snapshots(): Promise<void> {
+    const schemas = await load_schemas<FormatSchema>("data/Oracle/v2/formats");
+    const database = AppDataSource.getRepository(SnapshotEntity);
+    for(const schema of schemas) {
+        for(const member of schema.snapshots) {
+            let record = await database.findOneBy({ codename: member.id });
+            if(!record) {
+                record = new SnapshotEntity();
+            }
+
+            record.codename = member.id ?? "";
+            record.start_date = member.date_start ?? "";
+            record.format_codename = schema.id ?? "";
+            record.pool_codename = member.card_pool_id ?? "";
+            record.restriction_codename = member.restriction_id ?? "";
+            record.active = !!member.active;
+
+            const format_entity = await AppDataSource.manager.findOneBy(FormatEntity, { codename: record.format_codename });
+            if(format_entity) {
+                record.format = format_entity;
+            }
+
+            const pool_entity = await AppDataSource.manager.findOneBy(PoolEntity, { codename: record.pool_codename });
+            if(pool_entity) {
+                record.pool = pool_entity;
+            }
+
+            const restriction_entity = await AppDataSource.manager.findOneBy(RestrictionEntity, { codename: record.restriction_codename });
+            if(restriction_entity) {
+                record.restriction = restriction_entity;
+            }
+
+            await database.save(record);
+        }
+    }
+
+    log.info("Save 'snapshots' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -431,6 +470,7 @@ async function main(): Promise<void> {
     await extract_formats();
     await extract_pools();
     await extract_restrictions();
+    await extract_snapshots();
     await terminate();
 }
 
