@@ -7,7 +7,7 @@ import {
     SPLITTER,
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
+    FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity, CardEntity,
 } from './entities.js';
 
 
@@ -145,6 +145,68 @@ interface RestrictionSchema extends BaseSchema {
     readonly points: { readonly [key: string]: string[] };
     /** (暂不使用) */
     readonly point_limit: number;
+}
+
+/** 英文源数据「卡牌」 */
+interface CardSchema extends BaseSchema {
+    /** 卡牌名称 */
+    readonly title: string;
+    /** 卡牌名称（ASCII） */
+    readonly stripped_title: string;
+    /** 卡牌文本 */
+    readonly text: string;
+    /** 卡牌文本（ASCII） */
+    readonly stripped_text: string;
+    /** 卡牌类型ID */
+    readonly card_type_id: string;
+    /** 卡牌子类型ID */
+    readonly subtypes: string[];
+    /** 卡牌阵营ID */
+    readonly side_id: string;
+    /** 卡牌派系ID */
+    readonly faction_id: string;
+    /** 卡牌是否独有 */
+    readonly is_unique: boolean;
+    /** 卡牌牌组限制 */
+    readonly deck_limit: number | undefined;
+    /** 卡牌推进需求 */
+    readonly advancement_requirement: number | undefined;
+    /** 卡牌议案分数 */
+    readonly agenda_points: number | undefined;
+    /** 卡牌基础中转 */
+    readonly base_link: number | undefined;
+    /** 卡牌牌组最小张数 */
+    readonly minimum_deck_size: number | undefined;
+    /** 卡牌牌组影响力上限 */
+    readonly influence_limit: number | undefined;
+    /** 卡牌影响力费用 */
+    readonly influence_cost: number | undefined;
+    /** 卡牌费用 */
+    readonly cost: number | undefined;
+    /** 卡牌强度 */
+    readonly strength: number | undefined;
+    /** 卡牌内存费用 */
+    readonly memory_cost: number | undefined;
+    /** 卡牌销毁费用 */
+    readonly trash_cost: number | undefined;
+    /** 卡牌布局 */
+    readonly layout_id: "normal" | "flip" | "copy" | "facade" | "progression";
+    /** 卡牌其它牌面 */
+    readonly faces: {
+        readonly title: string;
+        readonly text: string;
+    }[];
+
+    /** 卡牌冠名 */
+    readonly attribution: string;
+    /** 卡牌设计组 */
+    readonly designed_by: string;
+    /** 卡牌人称代词 */
+    readonly pronouns: string;
+    /** 卡牌读音（国际音标） */
+    readonly pronunciation_ipa: string;
+    /** 卡牌读音（英文音标） */
+    readonly pronunciation_approx: string;
 }
 
 
@@ -458,6 +520,85 @@ async function extract_snapshots(): Promise<void> {
     log.info("Save 'snapshots' finished!");
 }
 
+async function extract_cards(): Promise<void> {
+    const schemas = await load_schemas<CardSchema>("data/Oracle/v2/cards");
+    const database = AppDataSource.getRepository(CardEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new CardEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.oracle_title = schema.title ?? "";
+        record.stripped_title = schema.stripped_title ?? "";
+        let oracle_text = schema.text ?? "";
+        if(schema.faces && schema.faces.length > 0) {
+            for(const face of schema.faces) {
+                if(!face.text) {
+                    continue;
+                }
+
+                let prefix = "<strong>Side:</strong> ";
+                if(schema.layout_id == "flip") {
+                    prefix = "<strong>Back:</strong> ";
+                } else {
+                    prefix = "<strong>Side:</strong> ";
+                }
+
+                const face_title = face.title ?? schema.title;
+                const face_text = face.text;
+                oracle_text = oracle_text + `\n${prefix}${face_title}\n${face_text}`;
+            }
+        }
+        record.oracle_text = oracle_text;
+        record.stripped_text = schema.stripped_text ?? "";
+        record.type_codename = schema.card_type_id ?? "";
+        if(schema.subtypes && schema.subtypes.length > 0) {
+            record.subtype_codename_list = schema.subtypes.join(SPLITTER);
+        }
+        record.side_codename = schema.side_id ?? "";
+        record.faction_codename = schema.faction_id ?? "";
+        record.is_unique = !!schema.is_unique;
+        record.deck_limit = schema.deck_limit;
+        record.advancement_requirement = schema.advancement_requirement;
+        record.agenda_point = schema.agenda_points;
+        record.base_link = schema.base_link;
+        record.minimum_deck_size = schema.minimum_deck_size;
+        record.influence_limit = schema.influence_limit;
+        record.influence_cost = schema.influence_cost;
+        record.cost = schema.cost;
+        record.strength = schema.strength;
+        record.memory_cost = schema.memory_cost;
+        record.trash_cost = schema.trash_cost;
+        record.attribution = schema.attribution ?? "";
+        record.designed_by = schema.designed_by ?? "";
+        record.pronouns = schema.pronouns ?? "";
+        record.pronunciation_ipa = schema.pronunciation_ipa ?? "";
+        record.pronunciation_approx = schema.pronunciation_approx ?? "";
+        record.extra_face = schema.faces ? schema.faces.length : 0;
+
+        const type_entity = await AppDataSource.manager.findOneBy(TypeEntity, { codename: record.type_codename });
+        if(type_entity) {
+            record.type = type_entity;
+        }
+
+        const side_entity = await AppDataSource.manager.findOneBy(SideEntity, { codename: record.side_codename });
+        if(side_entity) {
+            record.side = side_entity;
+        }
+
+        const faction_entity = await AppDataSource.manager.findOneBy(FactionEntity, { codename: record.faction_codename });
+        if(faction_entity) {
+            record.faction = faction_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'cards' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -471,6 +612,7 @@ async function main(): Promise<void> {
     await extract_pools();
     await extract_restrictions();
     await extract_snapshots();
+    await extract_cards();
     await terminate();
 }
 

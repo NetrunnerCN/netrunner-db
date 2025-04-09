@@ -6,7 +6,7 @@ import { AppDataSource } from "./data-source.js";
 import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity,
+    FormatEntity, CardEntity,
 } from './entities.js';
 
 
@@ -66,6 +66,14 @@ interface SetSchema extends BaseSchema {
 interface FormatSchema extends BaseSchema {
     /** 赛制名称 */
     readonly name: string;
+}
+
+/** 本地化数据「卡牌」 */
+interface CardSchema extends BaseSchema {
+    /** 卡牌名称 */
+    readonly name: string;
+    /** 卡牌文本 */
+    readonly text: string;
 }
 
 async function initialize(): Promise<void> {
@@ -216,6 +224,23 @@ async function extract_formats(): Promise<void> {
     log.info("Save 'formats' finished!");
 }
 
+async function extract_cards(): Promise<void> {
+    const schemas = await load_schemas<CardSchema>("data/Locale/data/cards.csv");
+    const database = AppDataSource.getRepository(CardEntity);
+    for(const schema of schemas) {
+        const record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            continue;
+        }
+
+        record.locale_title = schema.name ?? "";
+        record.locale_text = schema.text ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'cards' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -226,6 +251,7 @@ async function main(): Promise<void> {
     await extract_cycles();
     await extract_sets();
     await extract_formats();
+    await extract_cards();
     await terminate();
 }
 
