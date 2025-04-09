@@ -6,7 +6,7 @@ import { AppDataSource } from "./data-source.js";
 import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, CardEntity,
+    FormatEntity, CardEntity, PrintingEntity,
 } from './entities.js';
 
 
@@ -74,6 +74,12 @@ interface CardSchema extends BaseSchema {
     readonly name: string;
     /** 卡牌文本 */
     readonly text: string;
+}
+
+/** 本地化数据「卡图」 */
+interface PrintingSchema extends BaseSchema {
+    /** 卡图风味文字 */
+    readonly flavor: string;
 }
 
 async function initialize(): Promise<void> {
@@ -241,6 +247,22 @@ async function extract_cards(): Promise<void> {
     log.info("Save 'cards' finished!");
 }
 
+async function extract_printings(): Promise<void> {
+    const schemas = await load_schemas<PrintingSchema>("data/Locale/data/printings.csv");
+    const database = AppDataSource.getRepository(PrintingEntity);
+    for(const schema of schemas) {
+        const record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            continue;
+        }
+
+        record.locale_flavor = schema.flavor ?? "";
+        await database.save(record);
+    }
+
+    log.info("Save 'printings' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -252,6 +274,7 @@ async function main(): Promise<void> {
     await extract_sets();
     await extract_formats();
     await extract_cards();
+    await extract_printings();
     await terminate();
 }
 

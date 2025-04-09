@@ -7,7 +7,8 @@ import {
     SPLITTER,
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
-    FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity, CardEntity,
+    FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
+    CardEntity, PrintingEntity,
 } from './entities.js';
 
 
@@ -207,6 +208,28 @@ interface CardSchema extends BaseSchema {
     readonly pronunciation_ipa: string;
     /** 卡牌读音（英文音标） */
     readonly pronunciation_approx: string;
+}
+
+/** 英文源数据「卡图」 */
+interface PrintingSchema extends BaseSchema {
+    /** 卡图卡牌ID */
+    readonly card_id: string;
+    /** 卡图所属卡包ID */
+    readonly card_set_id: string;
+    /** 卡图序号 */
+    readonly position: number;
+    /** 卡图风味文字 */
+    readonly flavor: string;
+    /** 卡图数量 */
+    readonly quantity: number;
+    /** 卡图牌面 */
+    readonly faces: {
+        readonly flavor: string;
+    }[];
+    /** 卡图插画作者 */
+    readonly illustrator: string;
+    /** 卡图发行组 */
+    readonly released_by: string;
 }
 
 
@@ -599,6 +622,48 @@ async function extract_cards(): Promise<void> {
     log.info("Save 'cards' finished!");
 }
 
+async function extract_printings(): Promise<void> {
+    const schemas = await load_schemas<PrintingSchema>("data/Oracle/v2/printings");
+    const database = AppDataSource.getRepository(PrintingEntity);
+    for(const schema of schemas) {
+        let record = await database.findOneBy({ codename: schema.id });
+        if(!record) {
+            record = new PrintingEntity();
+        }
+
+        record.codename = schema.id ?? "";
+        record.card_codename = schema.card_id ?? "";
+        record.set_codename = schema.card_set_id ?? "";
+        record.position = schema.position;
+        let oracle_flavor = schema.flavor ?? "";
+        if(schema.faces && schema.faces.length > 0) {
+            for(const face of schema.faces) {
+                if(face.flavor && face.flavor.length > 0) {
+                    oracle_flavor = oracle_flavor + (oracle_flavor.length > 0 ? "\n" : "") + face.flavor;
+                }
+            }
+        }
+        record.oracle_flavor = oracle_flavor;
+        record.quantity = schema.quantity ?? 0;
+        record.illustrator = schema.illustrator ?? "";
+        record.released_by = schema.released_by ?? "";
+
+        const card_entity = await AppDataSource.manager.findOneBy(CardEntity, { codename: record.card_codename });
+        if(card_entity) {
+            record.card = card_entity;
+        }
+
+        const set_entity = await AppDataSource.manager.findOneBy(SetEntity, { codename: record.set_codename });
+        if(set_entity) {
+            record.set = set_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'printings' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -613,6 +678,7 @@ async function main(): Promise<void> {
     await extract_restrictions();
     await extract_snapshots();
     await extract_cards();
+    await extract_printings();
     await terminate();
 }
 

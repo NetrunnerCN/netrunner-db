@@ -4,7 +4,7 @@ import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
     FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
-    CardEntity,
+    CardEntity, PrintingEntity,
 } from './entities.js';
 
 export const AppDataSource = new DataSource({
@@ -15,7 +15,7 @@ export const AppDataSource = new DataSource({
         SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
         SettypeEntity, CycleEntity, SetEntity,
         FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
-        CardEntity
+        CardEntity, PrintingEntity
     ],
     migrations: ["./migrations/*.ts"],
 });
