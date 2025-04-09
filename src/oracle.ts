@@ -8,7 +8,7 @@ import {
     SideEntity, FactionEntity, TypeEntity, SubtypeEntity,
     SettypeEntity, CycleEntity, SetEntity,
     FormatEntity, PoolEntity, RestrictionEntity, SnapshotEntity,
-    CardEntity, PrintingEntity,
+    CardEntity, PrintingEntity, RulingEntity,
 } from './entities.js';
 
 
@@ -230,6 +230,22 @@ interface PrintingSchema extends BaseSchema {
     readonly illustrator: string;
     /** 卡图发行组 */
     readonly released_by: string;
+}
+
+/** 英文源数据「FAQ」 */
+interface RulingSchema extends BaseSchema {
+    /** FAQ所属卡牌ID */
+    readonly card_id: string;
+    /** FAQ问题 */
+    readonly question: string;
+    /** FAQ答案 */
+    readonly answer: string;
+    /** FAQ文本规则 */
+    readonly text_ruling: string;
+    /** FAQ日期 */
+    readonly date_update: string;
+    /** FAQ验证性 */
+    readonly nsg_rules_team_verified: boolean;
 }
 
 
@@ -664,6 +680,30 @@ async function extract_printings(): Promise<void> {
     log.info("Save 'printings' finished!");
 }
 
+async function extract_rulings(): Promise<void> {
+    const schemas = await load_schemas<RulingSchema>("data/Oracle/v2/rulings");
+    const database = AppDataSource.getRepository(RulingEntity);
+    await database.clear();
+    for(const schema of schemas) {
+        const record = new RulingEntity();
+        record.card_codename = schema.card_id ?? "";
+        record.question = schema.question ?? "";
+        record.answer = schema.answer ?? "";
+        record.text = schema.text_ruling ?? "";
+        record.update_date = schema.date_update ?? "";
+        record.nsg_verified = !!schema.nsg_rules_team_verified;
+
+        const card_entity = await AppDataSource.manager.findOneBy(CardEntity, { codename: record.card_codename });
+        if(card_entity) {
+            record.card = card_entity;
+        }
+
+        await database.save(record);
+    }
+
+    log.info("Save 'rulings' finished!");
+}
+
 async function main(): Promise<void> {
     await initialize();
     await extract_sides();
@@ -679,6 +719,7 @@ async function main(): Promise<void> {
     await extract_snapshots();
     await extract_cards();
     await extract_printings();
+    await extract_rulings();
     await terminate();
 }
 
